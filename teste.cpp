@@ -25,7 +25,6 @@ struct TSPProblem
     int totalCost;
 };
 
-// Converte as coordenadas de um ponto para radianos
 pair<double, double> convertToRadians(TSPProblem &problem, int i)
 {
     int deg, min;
@@ -143,12 +142,12 @@ bool checkKeyword(string keyword, string value, TSPProblem &problem)
 
 string trim(string s)
 {
-    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char c)
-                    { return !isspace(c); })
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char c)
+                         { return !std::isspace(c); })
                 .base(),
             s.end());
-    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c)
-                               { return !isspace(c); }));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char c)
+                                    { return !std::isspace(c); }));
     return s;
 }
 
@@ -161,7 +160,7 @@ void readInstance(TSPProblem &problem)
         {
             break;
         }
-        if (line.find(delimiter) != string::npos)
+        if (line.find(delimiter) != std::string::npos)
         {
             string keyword = line.substr(0, line.find(delimiter));
             string value = line.substr(line.find(delimiter) + 1, line.npos);
@@ -210,6 +209,34 @@ void printInstance(TSPProblem &problem)
             cout << problem.adjacencyMatrix[i][j] << " ";
         }
         cout << endl;
+    }
+}
+
+void apply2Opt(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost) {
+    bool improvement = true;
+    int numVertices = cycle.size() - 1; // O ciclo inclui o retorno ao ponto inicial
+
+    while (improvement) {
+        improvement = false;
+
+        for (int i = 1; i < numVertices - 1; ++i) {
+            for (int j = i + 1; j < numVertices; ++j) {
+                // Calcula o custo antes e depois de trocar as arestas
+                int currentCost = adjacencyMatrix[cycle[i - 1]][cycle[i]] +
+                                  adjacencyMatrix[cycle[j]][cycle[j + 1]];
+                int newCost = adjacencyMatrix[cycle[i - 1]][cycle[j]] +
+                              adjacencyMatrix[cycle[i]][cycle[j + 1]];
+
+                if (newCost < currentCost) {
+                    // Realiza a troca (inversão do subcaminho entre i e j)
+                    reverse(cycle.begin() + i, cycle.begin() + j + 1);
+
+                    // Atualiza o custo total
+                    totalCost += (newCost - currentCost);
+                    improvement = true;
+                }
+            }
+        }
     }
 }
 
@@ -264,7 +291,7 @@ void nearestInsertion(TSPProblem &problem)
 
     problem.cycle = cycle;
 
-    for (int i = 0; i < cycle.size() - 1; ++i)
+    for (size_t i = 0; i < cycle.size() - 1; ++i)
     {
         totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
     }
@@ -272,10 +299,18 @@ void nearestInsertion(TSPProblem &problem)
     problem.totalCost = totalCost;
 }
 
+void nearestInsertionWith2Opt(TSPProblem &problem) {
+    // Gera o ciclo inicial usando Nearest Insertion
+    nearestInsertion(problem);
+
+    // Refina o ciclo inicial com o algoritmo 2-opt
+    apply2Opt(problem.cycle, problem.adjacencyMatrix, problem.totalCost);
+}
+
 // Imprime o ciclo encontrado e o custo total
 void printSolution(TSPProblem &problem)
 {
-    nearestInsertion(problem);
+    nearestInsertionWith2Opt(problem);
 
     cout << "Ciclo encontrado:" << endl;
     for (int v : problem.cycle)
