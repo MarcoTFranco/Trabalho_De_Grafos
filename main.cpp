@@ -140,15 +140,12 @@ bool checkKeyword(string keyword, string value, TSPProblem &problem)
     return true;
 }
 
+// Remove espaços à esquerda e à direita de uma string
 string trim(string s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char c)
-                         { return !std::isspace(c); })
-                .base(),
-            s.end());
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char c)
-                                    { return !std::isspace(c); }));
-    return s;
+    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char c) { return !isspace(c); }).base(), s.end()); // Remove espaços à direita
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c){ return !isspace(c); })); // Remove espaços à esquerda
+    return s; // Retorna a string sem espaços à esquerda e à direita
 }
 
 void readInstance(TSPProblem &problem)
@@ -270,7 +267,7 @@ void nearestInsertion(TSPProblem &problem)
             if (!visited[v])
             {
                 // 3.1.1 Encontre a posição no ciclo atual onde a visita do vértice provoca o menor aumento no custo total do ciclo
-                for (size_t i = 0; i < cycle.size() - 1; ++i)
+                for (int i = 0; i < cycle.size() - 1; ++i)
                 {
                     int currentIncrease = problem.adjacencyMatrix[cycle[i]][v] + problem.adjacencyMatrix[v][cycle[i + 1]] - problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
                     if (currentIncrease < bestIncrease)
@@ -291,7 +288,7 @@ void nearestInsertion(TSPProblem &problem)
 
     problem.cycle = cycle;
 
-    for (size_t i = 0; i < cycle.size() - 1; ++i)
+    for (int i = 0; i < cycle.size() - 1; ++i)
     {
         totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
     }
