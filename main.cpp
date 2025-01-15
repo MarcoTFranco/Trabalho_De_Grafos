@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <limits>
+#include <fstream>
 
 using namespace std;
 
@@ -209,30 +210,26 @@ void printInstance(TSPProblem &problem)
     }
 }
 
-void apply2Opt(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost) {
+void applyLinKernighan(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost) {
     bool improvement = true;
-    int numVertices = cycle.size() - 1; // O ciclo inclui o retorno ao ponto inicial
+    int numVertices = cycle.size() - 1;
 
     while (improvement) {
         improvement = false;
 
-        for (int i = 1; i < numVertices - 1; ++i) {
-            for (int j = i + 1; j < numVertices; ++j) {
-                // Calcula o custo antes e depois de trocar as arestas
-                int currentCost = adjacencyMatrix[cycle[i - 1]][cycle[i]] +
-                                  adjacencyMatrix[cycle[j]][cycle[j + 1]];
-                int newCost = adjacencyMatrix[cycle[i - 1]][cycle[j]] +
-                              adjacencyMatrix[cycle[i]][cycle[j + 1]];
+        for (int t1 = 0; t1 < numVertices; ++t1) {
+            for (int t2 = t1 + 2; t2 < numVertices; ++t2) {
+                int gain = adjacencyMatrix[cycle[t1]][cycle[t1 + 1]] + adjacencyMatrix[cycle[t2]][cycle[(t2 + 1) % numVertices]]
+                           - adjacencyMatrix[cycle[t1]][cycle[t2]] - adjacencyMatrix[cycle[t1 + 1]][cycle[(t2 + 1) % numVertices]];
 
-                if (newCost < currentCost) {
-                    // Realiza a troca (inversão do subcaminho entre i e j)
-                    reverse(cycle.begin() + i, cycle.begin() + j + 1);
-
-                    // Atualiza o custo total
-                    totalCost += (newCost - currentCost);
+                if (gain > 0) {
+                    reverse(cycle.begin() + t1 + 1, cycle.begin() + t2 + 1);
+                    totalCost -= gain;
                     improvement = true;
+                    break;
                 }
             }
+            if (improvement) break;
         }
     }
 }
@@ -296,27 +293,40 @@ void nearestInsertion(TSPProblem &problem)
     problem.totalCost = totalCost;
 }
 
-void nearestInsertionWith2Opt(TSPProblem &problem) {
+void nearestInsertionWithLinKernighan(TSPProblem &problem) {
     // Gera o ciclo inicial usando Nearest Insertion
     nearestInsertion(problem);
 
-    // Refina o ciclo inicial com o algoritmo 2-opt
-    apply2Opt(problem.cycle, problem.adjacencyMatrix, problem.totalCost);
+    // Refina o ciclo inicial com o algoritmo Lin-Kernighan
+    applyLinKernighan(problem.cycle, problem.adjacencyMatrix, problem.totalCost);
 }
 
 // Imprime o ciclo encontrado e o custo total
 void printSolution(TSPProblem &problem)
 {
-    nearestInsertionWith2Opt(problem);
+    nearestInsertion(problem);  // Gera o ciclo inicial usando Nearest Insertion
+    
+    string saida_arquivo = "saida.txt";
+    ofstream arquivo(saida_arquivo);
 
-    cout << "Ciclo encontrado:" << endl;
+    if (arquivo.is_open()) {
+        
+    arquivo << "Valor da solução inicial (SI): " << problem.totalCost << endl;
+
+    nearestInsertionWithLinKernighan(problem);  // Refina o ciclo inicial com o algoritmo Lin-Kernighan
+
+    arquivo << "Ciclo encontrado:" << endl;
     for (int v : problem.cycle)
     {
-        cout << v << " ";
+        arquivo << v << " ";
     }
-    cout << endl;
+    arquivo << endl;
 
-    cout << "Valor total do caminho: " << problem.totalCost << endl;
+    arquivo << "Valor total do caminho (após Lin-Kernighan): " << problem.totalCost << endl;
+    }else {
+        cerr << "Não foi possível abrir o arquivo!" << endl;
+    }
+    
 }
 
 int main()
