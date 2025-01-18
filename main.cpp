@@ -16,26 +16,27 @@ const double PI = 3.141592;  // Valor de PI
 
 struct TSPProblem
 {
-    string type;
-    int dimension;
-    string edgeWeightType;
-    string displayDataType;
-    map<int, pair<double, double>> node;
+    string type; // Tipo do problema (TSP ou ATSP)
+    int dimension; // Número de vértices
+    string edgeWeightType; // Tipo de peso das arestas
+    string displayDataType; // Tipo de exibição dos dados
+    map<int, pair<double, double>> node; // Coordenadas geográficas dos pontos
     vector<vector<int>> adjacencyMatrix; // Matriz de adjacência com distâncias
-    vector<int> cycle;
-    int totalCost;
+    vector<int> cycle; // Ciclo encontrado
+    int totalCost; // Custo total do ciclo
 };
 
+// Converte as coordenadas geográficas de um ponto para radianos
 pair<double, double> convertToRadians(TSPProblem &problem, int i)
 {
     int deg, min;
     pair<double, double> coordInRadians = make_pair(problem.node[i].first, problem.node[i].second);
     deg = round(problem.node[i].first);
     min = problem.node[i].first - deg;
-    coordInRadians.first = PI * (deg + 5.0 * min / 3.0) / 180.0;
+    coordInRadians.first = PI * (deg + 5.0 * min / 3.0) / 180.0; // Converte para radianos
     deg = round(problem.node[i].second);
     min = problem.node[i].second - deg;
-    coordInRadians.second = PI * (deg + 5.0 * min / 3.0) / 180.0;
+    coordInRadians.second = PI * (deg + 5.0 * min / 3.0) / 180.0; // Converte para radianos
     return coordInRadians;
 }
 
@@ -44,16 +45,16 @@ int calculateGeographicalDistance(TSPProblem &problem, int i, int j)
 {
     pair<double, double> a = convertToRadians(problem, i);
     pair<double, double> b = convertToRadians(problem, j);
-    double latA = a.first;
-    double lonA = a.second;
-    double latB = b.first;
-    double lonB = b.second;
+    double latA = a.first; // Latitude do ponto A
+    double lonA = a.second; // Longitude do ponto A
+    double latB = b.first; // Latitude do ponto B
+    double lonB = b.second; // Longitude do ponto B
 
     double q1 = cos(lonA - lonB);
     double q2 = cos(latA - latB);
     double q3 = cos(latA + latB);
 
-    return RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0;
+    return RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0; // Distância geográfica
 }
 
 // Calcula a distância euclidiana entre dois pontos
@@ -64,6 +65,7 @@ int calculateEuclideanDistance(TSPProblem &problem, int i, int j)
     return round(sqrt(xd * xd + yd * yd));
 }
 
+// Constrói a matriz de adjacência com as distâncias entre os pontos
 void buildAdjacencyMatrix(TSPProblem &problem)
 {
     problem.adjacencyMatrix.resize(problem.dimension + 1, vector<int>(problem.dimension + 1, 0)); // Inicializa a matriz de adjacência com 0
@@ -72,21 +74,22 @@ void buildAdjacencyMatrix(TSPProblem &problem)
     {
         for (int j = i + 1; j <= problem.dimension; j++) // Apenas para j > i (aproveitando simetria)
         {
-            int distance = 0;
-            if (problem.edgeWeightType == "GEO")
+            int distance = 0; // Distância entre os vértices i e j
+            if (problem.edgeWeightType == "GEO") // Se o tipo de peso for GEO, calcula a distância geográfica
             {
-                distance = calculateGeographicalDistance(problem, i, j);
+                distance = calculateGeographicalDistance(problem, i, j); 
             }
-            else if (problem.edgeWeightType == "EUC_2D")
+            else if (problem.edgeWeightType == "EUC_2D") // Se o tipo de peso for EUC_2D, calcula a distância euclidiana
             {
                 distance = calculateEuclideanDistance(problem, i, j);
             }
-            problem.adjacencyMatrix[i][j] = distance;
+            problem.adjacencyMatrix[i][j] = distance; // Distância entre os vértices i e j
             problem.adjacencyMatrix[j][i] = distance; // Simetria
         }
     }
 }
 
+// Verifica se a palavra-chave é suportada e atribui o valor correspondente
 bool checkKeyword(string keyword, string value, TSPProblem &problem)
 {
     if (keyword == "TYPE")
@@ -184,32 +187,6 @@ void readInstance(TSPProblem &problem)
     }
 }
 
-void printInstance(TSPProblem &problem)
-{
-    cout << "TYPE: " << problem.type << endl;
-    cout << "DIMENSION: " << problem.dimension << endl;
-    cout << "EDGE_WEIGHT_TYPE: " << problem.edgeWeightType << endl;
-    cout << "DISPLAY_DATA_TYPE: " << problem.displayDataType << endl;
-    cout << "NODE_COORD_SECTION" << endl;
-
-    cout << "Adjacency Matrix:" << endl;
-    cout << "   ";
-    for (int j = 1; j <= problem.dimension; j++)
-    {
-        cout << j << "   ";
-    }
-    cout << endl;
-    for (int i = 1; i <= problem.dimension; i++)
-    {
-        cout << i << " ";
-        for (int j = 1; j <= problem.dimension; j++)
-        {
-            cout << problem.adjacencyMatrix[i][j] << " ";
-        }
-        cout << endl;
-    }
-}
-
 void applyLinKernighan(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost) {
     bool improvement = true;
     int numVertices = cycle.size() - 1;
@@ -285,9 +262,10 @@ void nearestInsertion(TSPProblem &problem)
 
     problem.cycle = cycle;
 
+    // Calcula o custo total do ciclo
     for (int i = 0; i < cycle.size() - 1; ++i)
     {
-        totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
+        totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]]; // Soma as distâncias entre os vértices
     }
 
     problem.totalCost = totalCost;
@@ -318,7 +296,7 @@ void printSolution(TSPProblem &problem)
     arquivo << "Ciclo encontrado:" << endl;
     for (int v : problem.cycle)
     {
-        arquivo << v << " ";
+        arquivo << "v_" << v << " ";
     }
     arquivo << endl;
 
