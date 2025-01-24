@@ -16,14 +16,16 @@ const double PI = 3.141592;  // Valor de PI
 
 struct TSPProblem
 {
-    string type; // Tipo do problema (TSP ou ATSP)
-    int dimension; // Número de vértices
-    string edgeWeightType; // Tipo de peso das arestas
-    string displayDataType; // Tipo de exibição dos dados
+    string fileName;                     // Nome do arquivo
+    string type;                         // Tipo do problema (TSP ou ATSP)
+    int dimension;                       // Número de vértices
+    string edgeWeightType;               // Tipo de peso das arestas
+    string displayDataType;              // Tipo de exibição dos dados
     map<int, pair<double, double>> node; // Coordenadas geográficas dos pontos
     vector<vector<int>> adjacencyMatrix; // Matriz de adjacência com distâncias
-    vector<int> cycle; // Ciclo encontrado
-    int totalCost; // Custo total do ciclo
+    vector<int> cycle;                   // Ciclo encontrado
+    int totalCost;                       // Custo total do ciclo
+    int maxWeight;                       // Peso da aresta mais pesada
 };
 
 // Converte as coordenadas geográficas de um ponto para radianos
@@ -45,9 +47,9 @@ int calculateGeographicalDistance(TSPProblem &problem, int i, int j)
 {
     pair<double, double> a = convertToRadians(problem, i);
     pair<double, double> b = convertToRadians(problem, j);
-    double latA = a.first; // Latitude do ponto A
+    double latA = a.first;  // Latitude do ponto A
     double lonA = a.second; // Longitude do ponto A
-    double latB = b.first; // Latitude do ponto B
+    double latB = b.first;  // Latitude do ponto B
     double lonB = b.second; // Longitude do ponto B
 
     double q1 = cos(lonA - lonB);
@@ -74,10 +76,10 @@ void buildAdjacencyMatrix(TSPProblem &problem)
     {
         for (int j = i + 1; j <= problem.dimension; j++) // Apenas para j > i (aproveitando simetria)
         {
-            int distance = 0; // Distância entre os vértices i e j
+            int distance = 0;                    // Distância entre os vértices i e j
             if (problem.edgeWeightType == "GEO") // Se o tipo de peso for GEO, calcula a distância geográfica
             {
-                distance = calculateGeographicalDistance(problem, i, j); 
+                distance = calculateGeographicalDistance(problem, i, j);
             }
             else if (problem.edgeWeightType == "EUC_2D") // Se o tipo de peso for EUC_2D, calcula a distância euclidiana
             {
@@ -147,9 +149,13 @@ bool checkKeyword(string keyword, string value, TSPProblem &problem)
 // Remove espaços à esquerda e à direita de uma string
 string trim(string s)
 {
-    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char c) { return !isspace(c); }).base(), s.end()); // Remove espaços à direita
-    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c){ return !isspace(c); })); // Remove espaços à esquerda
-    return s; // Retorna a string sem espaços à esquerda e à direita
+    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char c)
+                    { return !isspace(c); })
+                .base(),
+            s.end()); // Remove espaços à direita
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c)
+                               { return !isspace(c); })); // Remove espaços à esquerda
+    return s;                                             // Retorna a string sem espaços à esquerda e à direita
 }
 
 void readInstance(TSPProblem &problem)
@@ -187,26 +193,45 @@ void readInstance(TSPProblem &problem)
     }
 }
 
-void applyLinKernighan(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost) {
+void applyLinKernighan(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost, int &maxWeight)
+{
     bool improvement = true;
     int numVertices = cycle.size() - 1;
 
-    while (improvement) {
+    while (improvement)
+    {
         improvement = false;
 
-        for (int t1 = 0; t1 < numVertices; ++t1) {
-            for (int t2 = t1 + 2; t2 < numVertices; ++t2) {
-                int gain = adjacencyMatrix[cycle[t1]][cycle[t1 + 1]] + adjacencyMatrix[cycle[t2]][cycle[(t2 + 1) % numVertices]]
-                           - adjacencyMatrix[cycle[t1]][cycle[t2]] - adjacencyMatrix[cycle[t1 + 1]][cycle[(t2 + 1) % numVertices]];
+        for (int t1 = 0; t1 < numVertices; ++t1)
+        {
+            for (int t2 = t1 + 2; t2 < numVertices; ++t2)
+            {
+                int gain = adjacencyMatrix[cycle[t1]][cycle[t1 + 1]] + adjacencyMatrix[cycle[t2]][cycle[(t2 + 1) % numVertices]] - adjacencyMatrix[cycle[t1]][cycle[t2]] - adjacencyMatrix[cycle[t1 + 1]][cycle[(t2 + 1) % numVertices]];
 
-                if (gain > 0) {
+                if (gain > 0)
+                {
                     reverse(cycle.begin() + t1 + 1, cycle.begin() + t2 + 1);
                     totalCost -= gain;
                     improvement = true;
+
+                    // Update maxWeight
+                    maxWeight = -1;
+                    for (int i = 0; i < numVertices; ++i)
+                    {
+                        for (int j = i + 1; j < numVertices; ++j)
+                        {
+                            int weight = adjacencyMatrix[cycle[i]][cycle[j]];
+                            if (weight > maxWeight)
+                            {
+                                maxWeight = weight;
+                            }
+                        }
+                    }
                     break;
                 }
             }
-            if (improvement) break;
+            if (improvement)
+                break;
         }
     }
 }
@@ -218,13 +243,12 @@ void nearestInsertion(TSPProblem &problem)
     int totalCost = 0;
 
     // 1. Selecione um par de vértices qualquer
-    int start = 1;
-    int end = 2;
+    int start = 248;
+    int end = 248;
 
     // 2. Crie um ciclo indo do primeiro vértice ao segundo e voltando ao primeiro
     cycle.push_back(start);
     cycle.push_back(end);
-    cycle.push_back(start);
     visited[start] = true;
     visited[end] = true;
 
@@ -262,56 +286,77 @@ void nearestInsertion(TSPProblem &problem)
 
     problem.cycle = cycle;
 
-    // Calcula o custo total do ciclo
     for (int i = 0; i < cycle.size() - 1; ++i)
     {
         totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]]; // Soma as distâncias entre os vértices
     }
-
     problem.totalCost = totalCost;
-}
 
-void nearestInsertionWithLinKernighan(TSPProblem &problem) {
-    // Gera o ciclo inicial usando Nearest Insertion
-    nearestInsertion(problem);
+    // Identificar a aresta mais pesada
+    int maxWeight = -1;
+    pair<int, int> edge;
 
-    // Refina o ciclo inicial com o algoritmo Lin-Kernighan
-    applyLinKernighan(problem.cycle, problem.adjacencyMatrix, problem.totalCost);
+    for (int i = 0; i < problem.dimension; ++i)
+    {
+        for (int j = i + 1; j < problem.dimension; ++j)
+        { // Considera apenas uma vez cada par
+            int weight = problem.adjacencyMatrix[i][j];
+            if (weight > maxWeight)
+            {
+                maxWeight = weight;
+                edge = {i, j};
+            }
+        }
+    }
+
+    problem.maxWeight = maxWeight;
 }
 
 // Imprime o ciclo encontrado e o custo total
 void printSolution(TSPProblem &problem)
 {
-    nearestInsertion(problem);  // Gera o ciclo inicial usando Nearest Insertion
-    
-    string saida_arquivo = "saida.txt";
-    ofstream arquivo(saida_arquivo);
+    nearestInsertion(problem); // Gera o ciclo inicial usando Nearest Insertion
 
-    if (arquivo.is_open()) {
-        
-    arquivo << "Valor da solução inicial (SI): " << problem.totalCost << endl;
+    string outputFile = problem.fileName + ".txt";
+    ofstream file(outputFile);
 
-    nearestInsertionWithLinKernighan(problem);  // Refina o ciclo inicial com o algoritmo Lin-Kernighan
-
-    arquivo << "Ciclo encontrado:" << endl;
-    for (int v : problem.cycle)
+    if (file.is_open())
     {
-        arquivo << "v_" << v << " ";
-    }
-    arquivo << endl;
 
-    arquivo << "Valor total do caminho (após Lin-Kernighan): " << problem.totalCost << endl;
-    }else {
+        file << "Valor da solução inicial (SI): " << problem.totalCost << endl;
+        file << "Peso da aresta mais pesada (SI): " << problem.maxWeight << endl;
+
+        applyLinKernighan(problem.cycle, problem.adjacencyMatrix, problem.totalCost, problem.maxWeight); // Refina o ciclo inicial com o algoritmo Lin-Kernighan
+
+        file << "Ciclo encontrado:" << endl;
+        for (int v : problem.cycle)
+        {
+            file << "v_" << v << " ";
+        }
+        file << endl;
+
+        file << "Valor total do caminho (após Lin-Kernighan): " << problem.totalCost << endl;
+        file << "Peso da aresta mais pesada (após Lin-Kernighan): " << problem.maxWeight << endl;
+    }
+    else
+    {
         cerr << "Não foi possível abrir o arquivo!" << endl;
     }
-    
 }
 
 int main()
 {
     TSPProblem problem;
+    string fileName;
+
+    cin >> fileName;
+    problem.fileName = fileName;
+
     readInstance(problem);
+
     buildAdjacencyMatrix(problem);
+
     printSolution(problem);
+
     return 0;
 }
