@@ -193,81 +193,39 @@ void readInstance(TSPProblem &problem)
     }
 }
 
-void applyLinKernighan(vector<int> &cycle, const vector<vector<int>> &adjacencyMatrix, int &totalCost, int &maxWeight)
-{
-    bool improvement = true;
-    int numVertices = cycle.size() - 1;
-
-    while (improvement)
-    {
-        improvement = false;
-
-        for (int t1 = 0; t1 < numVertices; ++t1)
-        {
-            for (int t2 = t1 + 2; t2 < numVertices; ++t2)
-            {
-                int gain = adjacencyMatrix[cycle[t1]][cycle[t1 + 1]] + adjacencyMatrix[cycle[t2]][cycle[(t2 + 1) % numVertices]] - adjacencyMatrix[cycle[t1]][cycle[t2]] - adjacencyMatrix[cycle[t1 + 1]][cycle[(t2 + 1) % numVertices]];
-
-                if (gain > 0)
-                {
-                    reverse(cycle.begin() + t1 + 1, cycle.begin() + t2 + 1);
-                    totalCost -= gain;
-                    improvement = true;
-
-                    // Update maxWeight
-                    maxWeight = -1;
-                    for (int i = 0; i < numVertices; ++i)
-                    {
-                        for (int j = i + 1; j < numVertices; ++j)
-                        {
-                            int weight = adjacencyMatrix[cycle[i]][cycle[j]];
-                            if (weight > maxWeight)
-                            {
-                                maxWeight = weight;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-            if (improvement)
-                break;
-        }
-    }
-}
-
-void nearestInsertion(TSPProblem &problem)
+void cheapestInsertion(TSPProblem &problem)
 {
     vector<int> cycle;
     vector<bool> visited(problem.dimension + 1, false);
     int totalCost = 0;
 
     // 1. Selecione um par de vértices qualquer
-    int start = 248;
-    int end = 248;
-
-    // 2. Crie um ciclo indo do primeiro vértice ao segundo e voltando ao primeiro
+    int start = 1; // Pode ser configurado de outra forma, mas aqui escolhemos o vértice 1 como ponto inicial.
     cycle.push_back(start);
-    cycle.push_back(end);
+    cycle.push_back(start); // O ciclo inicialmente retorna ao ponto inicial.
     visited[start] = true;
-    visited[end] = true;
 
-    // 3. Enquanto houver vértices não visitados:
+    // 2. Enquanto houver vértices não visitados:
     while (cycle.size() - 1 < problem.dimension)
     {
         int bestVertex = -1;
         int bestPosition = -1;
         int bestIncrease = numeric_limits<int>::max();
 
-        // 3.1 Para todo vértice não visitado:
+        // 2.1 Para todo vértice não visitado:
         for (int v = 1; v <= problem.dimension; ++v)
         {
             if (!visited[v])
             {
-                // 3.1.1 Encontre a posição no ciclo atual onde a visita do vértice provoca o menor aumento no custo total do ciclo
+                // 2.2 Para cada posição no ciclo atual:
                 for (int i = 0; i < cycle.size() - 1; ++i)
                 {
-                    int currentIncrease = problem.adjacencyMatrix[cycle[i]][v] + problem.adjacencyMatrix[v][cycle[i + 1]] - problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
+                    // Calcule o aumento no custo total ao inserir `v` entre `cycle[i]` e `cycle[i+1]`
+                    int currentIncrease = problem.adjacencyMatrix[cycle[i]][v] + 
+                                          problem.adjacencyMatrix[v][cycle[i + 1]] - 
+                                          problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
+
+                    // Atualize o vértice e a posição se o aumento for o menor encontrado
                     if (currentIncrease < bestIncrease)
                     {
                         bestIncrease = currentIncrease;
@@ -278,44 +236,37 @@ void nearestInsertion(TSPProblem &problem)
             }
         }
 
-        // 3.2 Encontre o vértice não visitado tal que o aumento calculado no passo 3.1.1 é o menor dentre todos os vértices não visitados
-        // 3.3 Insira-o na posição correspondente do ciclo
+        // 2.3 Insira o vértice com o menor aumento no custo na posição correspondente do ciclo
         cycle.insert(cycle.begin() + bestPosition, bestVertex);
         visited[bestVertex] = true;
     }
 
-    problem.cycle = cycle;
-
+    // Calcule o custo total do ciclo
     for (int i = 0; i < cycle.size() - 1; ++i)
     {
-        totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]]; // Soma as distâncias entre os vértices
+        totalCost += problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
     }
     problem.totalCost = totalCost;
+    problem.cycle = cycle;
 
-    // Identificar a aresta mais pesada
+    // Identifique a aresta mais pesada
     int maxWeight = -1;
-    pair<int, int> edge;
-
-    for (int i = 0; i < problem.dimension; ++i)
+    for (int i = 0; i < cycle.size() - 1; ++i)
     {
-        for (int j = i + 1; j < problem.dimension; ++j)
-        { // Considera apenas uma vez cada par
-            int weight = problem.adjacencyMatrix[i][j];
-            if (weight > maxWeight)
-            {
-                maxWeight = weight;
-                edge = {i, j};
-            }
+        int weight = problem.adjacencyMatrix[cycle[i]][cycle[i + 1]];
+        if (weight > maxWeight)
+        {
+            maxWeight = weight;
         }
     }
-
     problem.maxWeight = maxWeight;
 }
+
 
 // Imprime o ciclo encontrado e o custo total
 void printSolution(TSPProblem &problem)
 {
-    nearestInsertion(problem); // Gera o ciclo inicial usando Nearest Insertion
+    cheapestInsertion(problem); // Gera o ciclo inicial usando Cheapest Insertion
 
     string outputFile = problem.fileName + ".txt";
     ofstream file(outputFile);
@@ -326,17 +277,12 @@ void printSolution(TSPProblem &problem)
         file << "Valor da solução inicial (SI): " << problem.totalCost << endl;
         file << "Peso da aresta mais pesada (SI): " << problem.maxWeight << endl;
 
-        applyLinKernighan(problem.cycle, problem.adjacencyMatrix, problem.totalCost, problem.maxWeight); // Refina o ciclo inicial com o algoritmo Lin-Kernighan
-
         file << "Ciclo encontrado:" << endl;
         for (int v : problem.cycle)
         {
             file << "v_" << v << " ";
         }
         file << endl;
-
-        file << "Valor total do caminho (após Lin-Kernighan): " << problem.totalCost << endl;
-        file << "Peso da aresta mais pesada (após Lin-Kernighan): " << problem.maxWeight << endl;
     }
     else
     {
