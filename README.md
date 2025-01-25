@@ -17,7 +17,7 @@ Uma empresa de transportes urbanos deseja otimizar a rota de uma linha de ônibu
 O projeto foi implementado utilizando C++ e bibliotecas da standard library.
 
 # Instruções para Execução
-### Clonar o Repositório
+### Clonando o Repositório
 Primeiro, clone o repositório para sua máquina local:
 
 ```sh
