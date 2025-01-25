@@ -22,13 +22,13 @@ Primeiro, clone o repositório para sua máquina local:
 ```sh
 git clone https://github.com/seu-usuario/trabalho-gcc218.git
 ```
-###Compilando o Código
+### Compilando o Código
 Após clonar o repositório, compile o código com o seguinte comando:
 
 ```sh
 g++ main.cpp -o tsp_problem
 ```
-###Executando o Programa
+### Executando o Programa
 Para executar o programa, utilize o comando abaixo, fornecendo o arquivo de entrada e o arquivo de saída como parâmetros:
 
 ```sh
