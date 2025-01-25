@@ -7,6 +7,7 @@
 #include <map>
 #include <limits>
 #include <fstream>
+#include <chrono>
 
 using namespace std;
 
@@ -161,37 +162,61 @@ string trim(string s)
 void readInstance(TSPProblem &problem)
 {
     string line;
+
+    // Verifica se o fluxo de entrada está funcionando
+    if (!cin)
+    {
+        cerr << "Erro: Fluxo de entrada inválido ou arquivo vazio." << endl;
+        return;
+    }
+
+    // Lê as especificações do problema antes da seção de coordenadas
     while (getline(cin, line))
     {
         if (line == "NODE_COORD_SECTION")
         {
-            break;
+            break; // Chegou na seção de coordenadas
         }
-        if (line.find(delimiter) != std::string::npos)
+
+        if (line.find(delimiter) != string::npos) // Verifica se há um delimitador na linha
         {
             string keyword = line.substr(0, line.find(delimiter));
-            string value = line.substr(line.find(delimiter) + 1, line.npos);
+            string value = line.substr(line.find(delimiter) + 1);
 
             if (!checkKeyword(trim(keyword), trim(value), problem))
             {
-                break;
+                cerr << "Erro ao interpretar a palavra-chave: " << keyword << endl;
+                return;
             }
         }
     }
 
+    // Lê as coordenadas dos nós até encontrar "EOF"
     while (getline(cin, line))
     {
         if (line == "EOF")
         {
             break;
         }
+
         stringstream ss(line);
         int id;
         double x, y;
+
+        // Extrai o ID e as coordenadas do nó
         ss >> id >> x >> y;
-        problem.node[id] = make_pair(x, y);
+        if (!ss.fail())
+        {
+            problem.node[id] = make_pair(x, y);
+        }
+        else
+        {
+            cerr << "Erro ao interpretar coordenadas: " << line << endl;
+            return;
+        }
     }
 }
+
 
 void cheapestInsertion(TSPProblem &problem)
 {
@@ -268,12 +293,11 @@ void printSolution(TSPProblem &problem)
 {
     cheapestInsertion(problem); // Gera o ciclo inicial usando Cheapest Insertion
 
-    string outputFile = problem.fileName + ".txt";
-    ofstream file(outputFile);
+    // Usa diretamente o nome do arquivo configurado em `problem.fileName`
+    ofstream file(problem.fileName);
 
     if (file.is_open())
     {
-
         file << "Valor da solução inicial (SI): " << problem.totalCost << endl;
         file << "Peso da aresta mais pesada (SI): " << problem.maxWeight << endl;
 
@@ -286,23 +310,57 @@ void printSolution(TSPProblem &problem)
     }
     else
     {
-        cerr << "Não foi possível abrir o arquivo!" << endl;
+        cerr << "Não foi possível abrir o arquivo para escrita!" << endl;
     }
 }
 
-int main()
+
+int main(int argc, char *argv[])
 {
+    if (argc < 3)
+    {
+        cerr << "Uso: " << argv[0] << " <arquivo_entrada> <arquivo_saida>" << endl;
+        return 1;
+    }
+
+    string inputFileName = argv[1];  // Nome do arquivo de entrada
+    string outputFileName = argv[2]; // Nome do arquivo de saída
+
     TSPProblem problem;
-    string fileName;
+    problem.fileName = outputFileName; // Salva o nome do arquivo de saída no problema
 
-    cin >> fileName;
-    problem.fileName = fileName;
+    // Abrir o arquivo de entrada
+    ifstream inputFile(inputFileName);
+    if (!inputFile.is_open())
+    {
+        cerr << "Erro ao abrir o arquivo de entrada: " << inputFileName << endl;
+        return 1;
+    }
 
-    readInstance(problem);
+    // Redireciona o fluxo de entrada padrão para o arquivo de entrada
+    cin.rdbuf(inputFile.rdbuf());
 
-    buildAdjacencyMatrix(problem);
+    auto start = chrono::high_resolution_clock::now();
 
-    printSolution(problem);
+    readInstance(problem);          // Lê os dados do problema do arquivo de entrada
+    buildAdjacencyMatrix(problem);  // Constrói a matriz de adjacência
+    printSolution(problem);         // Gera e imprime a solução no arquivo de saída
+
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> duration = end - start;
+
+    // Adiciona o tempo de execução ao arquivo de saída
+    ofstream outputFile(outputFileName, ios::app); // Reabrindo o arquivo em modo de acréscimo
+    if (outputFile.is_open())
+    {
+        outputFile << "Tempo de execução: " << duration.count() << "ms" << endl;
+        outputFile.close();
+    }
+    else
+    {
+        cerr << "Erro ao abrir o arquivo de saída para escrita: " << outputFileName << endl;
+    }
 
     return 0;
 }
+
